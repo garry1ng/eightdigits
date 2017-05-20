@@ -134,9 +134,8 @@
             this.goal = goal;
 
 
-
-
         },
+        
         /**
          * @desc 随机一个block填充到数据里面
          * @return void
@@ -271,22 +270,6 @@
                 // 循环要检测的高度
                 for(var j=0; j<data[0].length; j++) {
                     if (data[i][j] === 0) {
-                        //x是确定的, 循环y方向;
-                        /*
-                         for (var k = 0; k<j ; k++) {
-                         //当前的是data[j][i], 如果最上面的是0， 而且之间的全部是0
-                         if (data[k][i] === 0 && this.no_block_vertical(i, k, j)) {
-                         result.push( {form : {y:j,x:i}, to :{y:k,x:i}} );
-                         data[k][i] = data[j][i];
-                         data[j][i] = 0;
-                         break;
-                         }else if(data[j][i]!==0 && data[k][i] === data[j][i] && this.no_block_vertical(i, k, j)){
-                         result.push( {form : {y:j,x:i}, to :{y:k,x:i}} );
-                         data[k][i] += data[j][i];
-                         data[j][i] = 0;
-                         break;
-                         };
-                         };*/
                         data[i][j] = data[i-1][j];
                         data[i - 1][j] = 0;
                         result.push({form:{x:i,y:j}, to:{x:i-1,y:j}});
