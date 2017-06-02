@@ -6,14 +6,25 @@
     <title></title>
 </head>
 <body>
+<script src="jquery.js"></script>
+<script src="underscore-min.js"></script>
+<script src="priority_queue.js"></script>
+<!--
 <script src="http://cdn.bootcss.com/underscore.js/1.8.3/underscore-min.js"></script>
 <script src="http://cdn.bootcss.com/jquery/2.1.4/jquery.js"></script>
+-->
+
 <style>
     #container{
         width: auto;
     }
     #g{
         position: relative;
+    }
+
+    #goals{
+        position: relative;
+        margin-top: 30px;
     }
 
     #rightbtn{
@@ -78,10 +89,16 @@
                 <input type="button" name="searchBTN" value="Search!">
             </div>
             <div id = "tips" class="bottomTips">
-                <label id = "judge"> Yes </label>
+                <label id = "judge"> None </label>
                 <label>   |    </label>
-                <label id = "steps" style="right:50px"> 0 </label>
+                <label id = "steps" style="right:50px"> None </label>
+
             </div>
+            <strong> Goal: </strong>
+        </div>
+
+        <div id = "goals">
+
         </div>
 
     </div>
@@ -101,8 +118,25 @@
     </div>
     <% } %>
     <% } %>
+    <% } %>
+</script>
+
+<script id="tpl2" type="text/template">
+    <% for(var i = 0; i < goal.length; ++i){ %>
+    <%   for(var j = 0; j < goal[i].length; ++j){ %>
+        <div id="<%=i + 3%><%=j + 3%>" class="block" style="left:<%=util.getPost(j)%>;top:<%=util.getPost(i)%>"  data-x="<%=j+3%>" data-y="<%=i+3%>" data-info='{"x":<%=[j+3]%>,"y":<%=[i+3]%>}'>
+        </div>
+    <% } %>
+    <%   for(var j = 0; j < goal[i].length; ++j){ %>
+    <%   if(0 !==goal[i][j]){ %>
+    <div id="num<%=i%><%=j%>" class="num-block" style="left:<%=util.getPost(j)%>;top:<%=util.getPost(i)%>" >
+        <%=goal[i][j]%>
+    </div>
 
     <% } %>
+    <% } %>
+    <% } %>
+
 </script>
 <script>
     var Data = function() {
@@ -115,10 +149,7 @@
         init : function() {
             this.generateData();
         },
-        /**
-         * @desc 生成了默认的数据地图
-         * @param void
-         * */
+
         generateData : function() {
             var data = [];
             var goal = [];
@@ -153,6 +184,9 @@
             this.map[2][2] = 5;
 
             this.zeroPosition = 1;
+            this.BFSsteps = 0;
+            this.DFSsteps = 0;
+            this.BestFSsteps = 0;
 
             this.goal[0][0] = 1;
             this.goal[0][1] = 2;
@@ -193,7 +227,7 @@
         },
         /**
          * @desc 获取data里面数据内容为空的位置
-         * @return {x:number, y:number}
+         * @return
          * */
         getPosition : function() {
             var data = this.map;
@@ -242,31 +276,32 @@
 
         },
 
+        checkGoal: function () {
+            for(var i = 0; i < 3; ++i){
+                for(var j = 0; j < 3; ++j){
+                    if(this.goal[i][j] !== this.map[i][j]){
+                        return false;
+                    }
+                }
+            }
+            return true;
+        },
         /**
          * @desc 往左边移动
          * */
 
-        DFS: function (deepLimit) {
+        DFS: function () {
+            this.DFSsteps = 0;
             if(!this.isValid()){
                 return -1;
-
             }
-            var data
-
-        },
-
-        BFS: function () {
             var data = this.map;
-            var tempQueue = [];
-            var tempMap = {};
+            var tempStack = [];
+            var tempGrid = [];
             var jsMap = new Map();
-
-            var tempGrid =  [];
+            var str = data.toString();
             var goalstr = this.goal.toString();
 
-            var str = data.toString();
-            tempMap[str] = 0;
-            jsMap.set(str, 0);
 
             for(var i=0; i<3; i++) {
                 tempGrid[i] = tempGrid[i] || [];
@@ -274,17 +309,14 @@
                     tempGrid[i][j] = data[i][j];
                 }
             }
-
-            tempQueue.push(str);
-            if(!(this.isValid())){
-                return -1;
-            }
+            tempStack.push(str);
+            jsMap.set(str, 0);
             if(str === goalstr) {
                 return 0;
             }
-            while(tempQueue.length !== 0){
-                var current = tempQueue[0];
-                var tempStr = tempQueue.shift();
+            var depth = 1;
+            while(tempStack.length !== 0){
+                var tempStr = tempStack.pop();
                 tempStr = tempStr.replace(/,/g, '');
 
                 for(var i=0; i<3; i++) {
@@ -324,6 +356,101 @@
                     }
                     str = data.toString();
                     if(!jsMap.has(str)){
+                        this.DFSsteps++;
+                        jsMap.set(str, depth);
+                        if(str === goalstr){
+                            return depth;
+                        }
+                        tempStack.push(str);
+                    }
+
+                    for(var j = 0; j < 3; ++j){
+                        for(var k = 0; k < 3; ++k){
+                            data[j][k] = tempGrid[j][k];
+                        }
+                    }
+                    //data = tempGrid;
+                    this.getZeroPosition();
+
+
+                }
+                depth++;
+
+            }
+
+        },
+
+        BFS: function () {
+            if(!(this.isValid())){
+                return -1;
+            }
+            this.BFSsteps = 0;
+            var data = this.map;
+            var tempQueue = [];
+            var jsMap = new Map();
+
+            var tempGrid =  [];
+            var goalstr = this.goal.toString();
+
+            var str = data.toString();
+            jsMap.set(str, 0);
+
+            for(var i=0; i<3; i++) {
+                tempGrid[i] = tempGrid[i] || [];
+                for(var j=0; j<3; j++) {
+                    tempGrid[i][j] = data[i][j];
+                }
+            }
+
+            tempQueue.push(str);
+
+            if(str === goalstr) {
+                return 0;
+            }
+            while(tempQueue.length !== 0){
+                var current = tempQueue[0];
+                var tempStr = tempQueue.shift();
+                tempStr = tempStr.replace(/,/g, '');
+                //tempStr = tempStr.replace(/,/g, '');
+
+                for(var i=0; i<3; i++) {
+                    for(var j=0; j< 3; j++) {
+                        tempGrid[i][j] = parseInt(tempStr[i * 3+ j]);
+                    }
+                }
+
+                for(var j = 0; j < 3; ++j){
+                    for(var k = 0; k < 3; ++k){
+                        data[j][k] = tempGrid[j][k];
+                    }
+                }
+                this.getZeroPosition();
+
+                for(var i = 0; i < 4; ++i){
+                    switch(i){
+                        case 0:
+                            if(this.zeroPosition !== 0 || this.zeroPosition % 3 !== 0){
+                                this.moveLeft();
+                            }break;
+                        case 1:
+                            if(this.zeroPosition / 3 > 0.8){
+                                this.moveUp();
+                            }
+                            break;
+                        case 2:
+                            if(this.zeroPosition % 3 !== 2){
+                                this.moveRight();
+                            }
+                            break;
+                        case 3:
+                            if(this.zeroPosition / 3 <= 2){
+                                this.moveDown();
+                            }
+                            break;
+                    }
+                    str = data.toString();
+                    if(!jsMap.has(str)){
+                        this.BFSsteps++;
                         var t = jsMap.get(current);
                         t += 1;
                         jsMap.set(str, t);
@@ -334,13 +461,11 @@
 
                     }
 
-
                     for(var j = 0; j < 3; ++j){
                         for(var k = 0; k < 3; ++k){
                             data[j][k] = tempGrid[j][k];
                         }
                     }
-
                     //data = tempGrid;
                     this.getZeroPosition();
 
@@ -350,6 +475,124 @@
             }
 
         },
+
+        calPriority: function () {
+            var data = this.map;
+            var mis = 0;
+            for(var i = 0; i < 3; ++i){
+                for(var j = 0; j < 3; ++j){
+                    if(data[i][j] !== this.goal[i][j]){
+                        mis++;
+                    }
+                }
+            }
+            return mis;
+
+        },
+
+        BestFS: function () {
+            this.BestFSsteps = 0;
+            if(!(this.isValid())){
+                return -1;
+            }
+            this.BFSsteps = 0;
+            var data = this.map;
+            var tempQueue = new Priority_queue();
+            var debugQueue = new Priority_queue();
+            var jsMap = new Map();
+
+            var tempGrid =  [];
+            var goalstr = this.goal.toString();
+
+            var str = data.toString();
+            jsMap.set(str, 0);
+
+            for(var i=0; i<3; i++) {
+                tempGrid[i] = tempGrid[i] || [];
+                for(var j=0; j<3; j++) {
+                    tempGrid[i][j] = data[i][j];
+                }
+            }
+
+            tempQueue.enqueue(str,this.calPriority() + 0);
+            debugQueue.enqueue(str, this.calPriority() + 0);
+
+            if(str === goalstr) {
+                return 0;
+            }
+            var depth = 1;
+            while(tempQueue.length !== 0){
+                var current = tempQueue.peek().element;
+                var tempStr = tempQueue.dequeue();
+                tempStr.element = tempStr.element.replace(/,/g, '');
+
+                for(var i=0; i<3; i++) {
+                    for(var j=0; j< 3; j++) {
+                        tempGrid[i][j] = parseInt(tempStr.element[i * 3+ j]);
+                    }
+                }
+
+                for(var j = 0; j < 3; ++j){
+                    for(var k = 0; k < 3; ++k){
+                        data[j][k] = tempGrid[j][k];
+                    }
+                }
+                this.getZeroPosition();
+
+                for(var i = 0; i < 4; ++i){
+                    switch(i){
+                        case 0:
+                            if(this.zeroPosition !== 0 || this.zeroPosition % 3 !== 0){
+                                this.moveLeft();
+                            }break;
+                        case 1:
+                            if(this.zeroPosition / 3 > 0.8){
+                                this.moveUp();
+                            }
+                            break;
+                        case 2:
+                            if(this.zeroPosition % 3 !== 2){
+                                this.moveRight();
+                            }
+                            break;
+                        case 3:
+                            if(this.zeroPosition / 3 <= 2){
+                                this.moveDown();
+                            }
+                            break;
+                    }
+                    str = data.toString();
+                    if(!jsMap.has(str)){
+                        this.BestFSsteps++;
+                        var t = jsMap.get(current) + 1;
+                        jsMap.set(str, t);
+                        if(str === goalstr){
+                            debugQueue.enqueue(str, t);
+                            return t;
+                        }
+                        var p = this.calPriority() + depth;
+                        tempQueue.enqueue(str, p);
+                        debugQueue.enqueue(str,p);
+
+                    }
+
+                    for(var j = 0; j < 3; ++j){
+                        for(var k = 0; k < 3; ++k){
+                            data[j][k] = tempGrid[j][k];
+                        }
+                    }
+                    //data = tempGrid;
+                    this.getZeroPosition();
+
+
+                }
+                depth++;
+
+            }
+
+        },
+
+
         getZeroPosition : function(){
             var data = this.map;
             for(var i = 0; i < data.length; ++i){
@@ -450,13 +693,18 @@
     var View = function(data) {
         this.data = data.data;
         this.el = data.el;
+        this.gl = data.gl;
         this.renderHTML();
         this.init();
+        this.humanSteps = 0;
     };
     $.extend(View.prototype, {
         renderHTML : function() {
             var str = _.template( document.getElementById("tpl").innerHTML )( {data : this.data.map} );
             this.el.innerHTML = str;
+
+            var goalString = _.template( document.getElementById("tpl2").innerHTML)({goal : this.data.goal});
+            this.gl.innerHTML = goalString;
         },
         init : function() {
             this.bindEvents();
@@ -465,14 +713,48 @@
             $("#btnBFS").click(function () {
                 var t = this.data.BFS();
                 if(t !== -1 ){
-                    alert("The steps you need by BFS: " + t);
+                    /*
+                    if(confirm("The minimum steps you need to reach the goal searching by BFS is: " + t + "\nThe actual steps required in searching is: "
+                            + this.data.BFSsteps + "\nDo you want to watch the full procedure, or directly go to the goal state?")){
+                        alert("Yes!");
+                    }else{
+                        this.renderHTML();
+                    }
+                    */
+                    alert("The minimum steps you need to reach the goal searching by \nBFS is: " + t + "\nThe actual steps required in searching is: "
+                        + this.data.BFSsteps);
                     this.renderHTML();
+                    document.getElementById("judge").innerHTML = "Yes";
+                    document.getElementById("steps").innerHTML = this.data.BFSsteps;
 
                 }else{
-                    alert("fucked up!");
+                    alert("No solution!");
+                    document.getElementById("judge").innerHTML = "No";
+                    document.getElementById("steps").innerHTML = "None";
+
                 }
 
             }.bind(this));
+
+            $("#btnBestFS").click(function () {
+                //alert("best");
+                var t = this.data.BestFS();
+                if(t !== -1){
+                    alert("The minimum steps you need to reach the goal searching by \nBest-First Search is: " + t + "\nThe actual steps required in searching is: "
+                        + this.data.BestFSsteps);
+                    this.renderHTML();
+                    document.getElementById("judge").innerHTML = "Yes";
+                    document.getElementById("steps").innerHTML = this.data.BestFSsteps;
+                }else{
+                    alert("No solution!");
+                    document.getElementById("judge").innerHTML = "No";
+                    document.getElementById("steps").innerHTML = "None";
+
+
+                }
+
+            }.bind(this));
+
             $("#reBTN").click(function(){
                 //alert("a");
                 //this.data.generationBlock();
@@ -483,10 +765,17 @@
             $("#btnDFS").click(function () {
                 var t = this.data.DFS();
                 if(t !== -1 ){
-                    alert("The steps you need by DFS: " + t);
+                    alert("The steps you need by DFS is: " + this.data.DFSsteps + ", after searching in " + t + " depth.");
                     this.renderHTML();
+                    document.getElementById("judge").innerHTML = "Yes";
+                    document.getElementById("steps").innerHTML = this.data.DFSsteps;
+
                 }else{
-                    alert("fucked up!");
+                    alert("No solution!");
+                    document.getElementById("judge").innerHTML = "No";
+                    document.getElementById("steps").innerHTML = "None";
+
+
                 }
             }.bind(this));
 
@@ -495,25 +784,35 @@
                 switch(ev.keyCode) {
                     case 65:
                         animationArray = this.data.moveLeft();
+
                         break;
                     case 87 :
                         animationArray = this.data.moveUp();
+
                         break;
                     case 68 :
                         animationArray = this.data.moveRight();
+
                         break;
                     case 83 :
                         animationArray = this.data.moveDown();
+
                         break;
-                };
+                }
+
                 if( animationArray ) {
                     for(var i=0; i<animationArray.length; i++ ) {
                         var prop = animationArray[i];
                         this.animateMoveBlock(prop);
+                        this.humanSteps++;
                     };
                 };
                 //this.data.generationBlock();
                 this.animateShowBlock();
+                if(this.data.checkGoal()){
+                    alert("Congratulations! You use " + this.humanSteps + " steps to reach the goal!");
+                    this.humanSteps = 0;
+                }
             }.bind(this));
         }
     });
@@ -521,7 +820,7 @@
     $(function() {
         var data = new Data();
         data.generationBlock();
-        var view = new View({ data :data, el : document.getElementById("g") });
+        var view = new View({ data :data, el : document.getElementById("g"), gl : document.getElementById("goals")  });
         $.extend( true, view, util );
         view.renderHTML();
         //alert("WASD控制方向");
