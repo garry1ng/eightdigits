@@ -70,23 +70,28 @@
         </div>
 
         <div id = "rightbtn" class="rightbtn">
-            <div id = "btnBFS" class="rightbtn">
-                <input type="button" name="btn1" value="BFS">
+            <div id = "BFS" class="rightbtn">
+                <input id = "btnBFS" type="button" name="btn1" value="BFS">
+                <input type="checkbox" id="bfsCheck" name="bfsCheck">
                 <br> </br>
             </div>
-            <div id = "btnDFS" class="rightbtn">
-                <input type="button" name="btn2" value="DFS">
+            <div id = "DFS" class="rightbtn">
+                <input id ="btnDFS" type="button" name="btn2" value="DFS">
+                <input type="checkbox" id="dfsCheck" name="dfsCheck">
+
                 <br> </br>
             </div>
-            <div id = "btnBestFS" class="rightbtn">
-                <input type="button" name="btn3" value="BFS(BEST)">
+            <div id = "BestFS" class="rightbtn">
+                <input id="btnBestFS" type="button" name="btn3" value="BFS(BEST)">
+                <input type="checkbox" id="bestfsCheck" name="bestfsCheck">
+
             </div>
 
         </div>
         <div id ="bottomBTN" class="bottomBTN">
             <div id = "btnRe" class = "bottomBTN">
                 <input type="button" name="reBTN" id="reBTN" value="Reinitialize">
-                <input type="button" name="searchBTN" value="Search!">
+                <input id="search" type="button" name="searchBTN" value="Search!">
             </div>
             <div id = "tips" class="bottomTips">
                 <label id = "judge"> None </label>
@@ -710,6 +715,24 @@
             this.bindEvents();
         },
         bindEvents : function() {
+            $("#search").click(function () {
+                var bfs = $("#bfsCheck").get(0).checked;
+                var dfs = $("#dfsCheck").get(0).checked;
+                var bestfs = $("#bestfsCheck").get(0).checked;
+                if(bfs + dfs + bestfs >= 2){
+                    alert("Don't choose searching options more than one!");
+                    return;
+                }
+                if(bfs){
+                    $("#btnBFS").trigger("click");
+                }else if(dfs){
+                    $("#btnDFS").trigger("click");
+                }else if(bestfs){
+                    $("#btnBestFS").trigger("click");
+                }
+
+
+            }.bind(this));
             $("#btnBFS").click(function () {
                 var t = this.data.BFS();
                 if(t !== -1 ){
